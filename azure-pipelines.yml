@@ -1,0 +1,97 @@
+name: $(Build.SourceBranchName).$(date:yyyyMMdd)$(rev:.r)
+
+variables:
+  Artifactory.Repository: $(Repository)
+
+trigger:
+  branches:
+    include:
+      - master
+      - feature/*
+      
+resources:
+  - repo: self
+    clean: true
+    
+queue:
+  name: Build
+  demands:
+    - maven
+    - java
+    
+steps:
+  - task: SonarQubePrepare@4
+    displayName: "Prepare analysis on SonarQube"
+    inputs:
+      SonarQube: SonarQube
+      scannerMode: CLI
+      configMode: manual
+      cliProjectKey: "$(Build.Repository.Name)"
+      cliProjectName: "$(Build.Repository.Name)"
+      cliProjectVersion: "$(Build.BuildNumber)"
+      extraProperties: |
+        sonar.sources=src/main/java
+        sonar.java.binaries=target/classes
+        sonar.tests=src/test/java
+        sonar.junit.reportPaths=target/surefire-reports
+        sonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+        sonar.coverage.exclusions=**/azure/repos/model/**
+        sonar.java.test.binaries=target/test-classes
+
+  - task: Maven@3
+    displayName: "Maven Build and Test"
+    inputs:
+      mavenPomFile: "pom.xml"
+      publishJUnitResults: true
+      testResultsFiles: "**/TEST-*.xml"
+      jdkArchitectureOption: "x64"
+      goals: "clean install package verify"
+      testRunTitle: "$(Build.Repository.Name).$(Build.BuildNumber)"
+
+  - task: SonarQubeAnalyze@4
+    displayName: "Run Code Analysis"
+
+  - task: sonar-buildbreaker@8
+    inputs:
+      SonarQube: 'SonarQube'
+
+  - task: CopyFiles@2
+    inputs:
+      SourceFolder: '$(Build.SourcesDirectory)'
+      Contents: |
+        Dockerfile
+        docker/*
+        target/*.jar
+      TargetFolder: '$(Build.BinariesDirectory)'
+      CleanTargetFolder: true
+      
+  - task: ArchiveFiles@2
+    inputs:
+      rootFolderOrFile: '$(Build.BinariesDirectory)'
+      includeRootFolder: false
+      archiveType: 'zip'
+      archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildNumber).zip'
+      replaceExistingArchive: true
+
+  - task: PublishBuildArtifacts@1
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+    displayName: "Publish Artifact"
+    inputs:
+      PathtoPublish: $(Build.ArtifactStagingDirectory)
+      ArtifactName: Artifact
+
+  - task: ArtifactoryGenericUpload@1
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+    displayName: "Publish Artifact to Artifactory"
+    inputs:
+      artifactoryService: "Artifactory"
+      fileSpec: |
+        {
+          "files": [
+            {
+              "pattern": "$(Build.ArtifactStagingDirectory)/$(Build.BuildNumber).zip",
+              "target": "$(Artifactory.Repository)/$(Build.BuildNumber)/"
+            }
+          ]
+        }
+      collectBuildInfo: true
