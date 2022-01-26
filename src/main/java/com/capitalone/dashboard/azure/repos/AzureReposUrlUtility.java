@@ -6,16 +6,13 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
-import org.slf4j.Logger;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.support.CronSequenceGenerator;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import com.capitalone.dashboard.collector.AzureReposSettings;
-import com.capitalone.dashboard.collector.CollectorTask;
 import com.capitalone.dashboard.misc.HygieiaException;
 import com.capitalone.dashboard.model.AzureRepo;
 import com.capitalone.dashboard.model.AzureRepoParsed;
