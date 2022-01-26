@@ -58,7 +58,9 @@ public class AzureReposUrlUtilityTest {
 		// Arrange
 		when(reposMock.getRepoUrl()).thenReturn("https://dev.azure.com/test/Hack/_git/test");
 		Long time = 1000L;
+		String expected = "0 0/10 * * * *";
 		when(reposMock.getLastUpdated()).thenReturn(time);
+		when(collectorSettings.getCron()).thenReturn(expected);
 		// Act
 		azureReposUrlUtility.buildApiCommitsUrl(reposMock, false);
 		// Assert
