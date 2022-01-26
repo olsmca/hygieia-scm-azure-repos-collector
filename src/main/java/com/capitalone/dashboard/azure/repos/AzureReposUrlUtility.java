@@ -6,13 +6,16 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import org.slf4j.Logger;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.support.CronSequenceGenerator;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import com.capitalone.dashboard.collector.AzureReposSettings;
+import com.capitalone.dashboard.collector.CollectorTask;
 import com.capitalone.dashboard.misc.HygieiaException;
 import com.capitalone.dashboard.model.AzureRepo;
 import com.capitalone.dashboard.model.AzureRepoParsed;
@@ -99,10 +102,14 @@ public class AzureReposUrlUtility {
 		if (firstRun) {
 			dt = getDate(new Date(), -FIRST_RUN_HISTORY_DEFAULT, 0);
 		} else {
-			dt = getDate(new Date(repo.getLastUpdated()), 0, -10);
+			dt = getDate(new Date(repo.getLastUpdated()), 0, -getMinutesFromCron());
 		}
 		DateFormat df = new SimpleDateFormat(DATE_FORMAT_QUERY_GIT);
 		return df.format(dt);
+	}
+
+	private int getMinutesFromCron(){		
+		return Integer.valueOf(collectorSettings.getCron().split(" ")[1].split("/")[1]);
 	}
 
 	private Date getDate(Date dateInstance, int offsetDays, int offsetMinutes) {
